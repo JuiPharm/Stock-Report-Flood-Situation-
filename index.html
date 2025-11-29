@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>คลังยา - หนีน้ำท่วม</title>
+  <title>Stock Report (Flood Situation)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
@@ -406,6 +406,39 @@
       }
     }
 
+    /* Tabs สำหรับสลับหน้า Inventory / PO */
+    .tabs-card {
+      padding: 10px 14px;
+      margin-top: -6px;
+      margin-bottom: 14px;
+    }
+
+    .tabs {
+      display: inline-flex;
+      gap: 6px;
+      background: rgba(15,23,42,0.9);
+      border-radius: 999px;
+      padding: 4px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .tab {
+      border: none;
+      outline: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
     @media (max-width: 640px) {
       .app-header {
         flex-direction: column;
@@ -433,11 +466,11 @@
       <div>
         <div class="badge">Pharmacy Inventory</div>
         <div class="app-title">คลังยา หนีน้ำท่วม</div>
-        <div class="app-subtitle">ดูยอดคงเหลือ รับเข้า และจ่ายออก จาก Google Sheet</div>
+        <div class="app-subtitle">ดูยอดคงเหลือ รับเข้า จ่ายออก และ PO จาก Google Sheet</div>
       </div>
       <div class="meta-col">
         <div class="meta-row">
-          <span class="meta-label">อัปเดตล่าสุด:</span>
+          <span class="meta-label">อัปเดตล่าสุด (คลังยา):</span>
           <span id="last-updated" class="meta-value">-</span>
         </div>
         <div class="meta-row">
@@ -447,87 +480,141 @@
       </div>
     </div>
 
+    <!-- Tabs -->
+    <div class="card tabs-card">
+      <div class="tabs">
+        <button type="button" id="tab-inventory" class="tab active">คลังยา</button>
+        <button type="button" id="tab-po" class="tab">PO รอจัดส่ง</button>
+      </div>
+    </div>
+
     <div id="global-error" class="global-message hidden"></div>
 
-    <div class="card">
-      <label class="field-label" for="search-input">ค้นหาชื่อยา</label>
-      <div class="search-wrapper">
-        <input id="search-input" type="text" class="search-input"
-               placeholder="พิมพ์ชื่อยา เช่น adrenaline, nitroglycerine ..."
-               autocomplete="off">
+    <!-- PAGE: INVENTORY -->
+    <div id="page-inventory">
+      <div class="card">
+        <label class="field-label" for="search-input">ค้นหาชื่อยา</label>
+        <div class="search-wrapper">
+          <input id="search-input" type="text" class="search-input"
+                 placeholder="พิมพ์ชื่อยา เช่น adrenaline, nitroglycerine ..."
+                 autocomplete="off">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-header-row">
+          <div class="table-title">รายการยาในคลัง</div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ชื่อยา</th>
+                <th style="width: 140px;">จำนวนคงเหลือ</th>
+                <th style="width: 90px;">หน่วย</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state hidden">
+            ไม่พบข้อมูลตรงกับการค้นหา
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="admin-header">
+          <div>
+            <div class="admin-title">Admin · รับเข้า / จ่ายออก</div>
+            <div class="admin-subtitle">อัปเดตจำนวนคงเหลือในคลัง (เฉพาะผู้ดูแลระบบ)</div>
+          </div>
+        </div>
+        <form id="admin-form" class="admin-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="admin-password" class="field-label">รหัสผ่าน Admin</label>
+              <input id="admin-password" type="password" class="field-input"
+                     autocomplete="current-password" required>
+            </div>
+            <div class="field">
+              <label for="item-name" class="field-label">ชื่อยา</label>
+              <input id="item-name" type="text" class="field-input"
+                     list="item-suggestions" autocomplete="off" required>
+              <datalist id="item-suggestions"></datalist>
+              <div class="hint">ถ้าเลือกชื่อยาจากรายการ ระบบจะดึงหน่วยให้โดยอัตโนมัติ</div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="item-unit" class="field-label">หน่วย</label>
+              <input id="item-unit" type="text" class="field-input" required>
+            </div>
+            <div class="field field-inline">
+              <div class="field-inline-col">
+                <label for="item-amount" class="field-label">จำนวน</label>
+                <input id="item-amount" type="number" min="1" step="1"
+                       class="field-input" required>
+              </div>
+              <div class="field-inline-col">
+                <label for="action-type" class="field-label">ประเภท</label>
+                <select id="action-type" class="field-input">
+                  <option value="in">รับเข้า</option>
+                  <option value="out">จ่ายออก</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="admin-footer-row">
+            <div id="admin-message" class="admin-message"></div>
+            <button type="submit" class="primary">บันทึกการเคลื่อนไหว</button>
+          </div>
+        </form>
       </div>
     </div>
 
-    <div class="card">
-      <div class="table-header-row">
-        <div class="table-title">รายการยาในคลัง</div>
-      </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>ชื่อยา</th>
-              <th style="width: 140px;">จำนวนคงเหลือ</th>
-              <th style="width: 90px;">หน่วย</th>
-            </tr>
-          </thead>
-          <tbody id="inventory-tbody"></tbody>
-        </table>
-        <div id="empty-state" class="empty-state hidden">
-          ไม่พบข้อมูลตรงกับการค้นหา
+    <!-- PAGE: PO รอจัดส่ง -->
+    <div id="page-po" class="hidden">
+      <div class="card">
+        <label class="field-label" for="po-search-input">ค้นหา (Item name / Vendor)</label>
+        <div class="search-wrapper">
+          <input id="po-search-input" type="text" class="search-input"
+                 placeholder="ค้นหาชื่อยา หรือ vendor"
+                 autocomplete="off">
         </div>
       </div>
-    </div>
 
-    <div class="card">
-      <div class="admin-header">
-        <div>
-          <div class="admin-title">Admin · รับเข้า / จ่ายออก</div>
-          <div class="admin-subtitle">อัปเดตจำนวนคงเหลือในคลัง (เฉพาะผู้ดูแลระบบ)</div>
+      <div class="card">
+        <div class="table-header-row">
+          <div class="table-title">รายการ PO ยาที่รอจัดส่ง</div>
+          <div class="meta-row">
+            <span class="meta-label">อัปเดตล่าสุด (PO):</span>
+            <span id="po-last-updated" class="meta-value">-</span>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Item name</th>
+                <th>QTY</th>
+                <th>Unit</th>
+                <th>Delivery date</th>
+                <th>Vendor</th>
+              </tr>
+            </thead>
+            <tbody id="po-tbody"></tbody>
+          </table>
+          <div id="po-empty-state" class="empty-state hidden">
+            ไม่พบข้อมูล PO ตรงกับการค้นหา
+          </div>
+        </div>
+        <div class="meta-row" style="margin-top: 10px;">
+          <span class="meta-label">จำนวนรายการ PO:</span>
+          <span id="po-rows-count" class="meta-value">-</span>
         </div>
       </div>
-      <form id="admin-form" class="admin-form">
-        <div class="form-grid">
-          <div class="field">
-            <label for="admin-password" class="field-label">รหัสผ่าน Admin</label>
-            <input id="admin-password" type="password" class="field-input"
-                   autocomplete="current-password" required>
-          </div>
-          <div class="field">
-            <label for="item-name" class="field-label">ชื่อยา</label>
-            <input id="item-name" type="text" class="field-input"
-                   list="item-suggestions" autocomplete="off" required>
-            <datalist id="item-suggestions"></datalist>
-            <div class="hint">ถ้าเลือกชื่อยาจากรายการ ระบบจะดึงหน่วยให้โดยอัตโนมัติ</div>
-          </div>
-        </div>
-
-        <div class="form-grid">
-          <div class="field">
-            <label for="item-unit" class="field-label">หน่วย</label>
-            <input id="item-unit" type="text" class="field-input" required>
-          </div>
-          <div class="field field-inline">
-            <div class="field-inline-col">
-              <label for="item-amount" class="field-label">จำนวน</label>
-              <input id="item-amount" type="number" min="1" step="1"
-                     class="field-input" required>
-            </div>
-            <div class="field-inline-col">
-              <label for="action-type" class="field-label">ประเภท</label>
-              <select id="action-type" class="field-input">
-                <option value="in">รับเข้า</option>
-                <option value="out">จ่ายออก</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="admin-footer-row">
-          <div id="admin-message" class="admin-message"></div>
-          <button type="submit" class="primary">บันทึกการเคลื่อนไหว</button>
-        </div>
-      </form>
     </div>
   </div>
 
@@ -540,9 +627,12 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbyqSTg8O7-if89iCyuSpuQ8df-jHpKYLbjL5JDlvBrAhZQFQnyEMist5i41RZgVTSf4/exec';
 
     let inventoryData = [];
+    let poData = [];
     let isLoading = false;
+    let currentPage = 'inventory';
 
     const elements = {
+      // Inventory
       tableBody: document.getElementById('inventory-tbody'),
       searchInput: document.getElementById('search-input'),
       lastUpdated: document.getElementById('last-updated'),
@@ -557,6 +647,21 @@
       itemAmount: document.getElementById('item-amount'),
       actionType: document.getElementById('action-type'),
       itemSuggestions: document.getElementById('item-suggestions'),
+
+      // PO
+      poTableBody: document.getElementById('po-tbody'),
+      poEmptyState: document.getElementById('po-empty-state'),
+      poLastUpdated: document.getElementById('po-last-updated'),
+      poRowsCount: document.getElementById('po-rows-count'),
+      poSearchInput: document.getElementById('po-search-input'),
+
+      // Tabs / pages
+      tabInventory: document.getElementById('tab-inventory'),
+      tabPo: document.getElementById('tab-po'),
+      pageInventory: document.getElementById('page-inventory'),
+      pagePo: document.getElementById('page-po'),
+
+      // Global
       globalError: document.getElementById('global-error'),
       loadingOverlay: document.getElementById('loading-overlay')
     };
@@ -578,6 +683,7 @@
       }
       elements.globalError.textContent = message;
       elements.globalError.classList.remove('hidden');
+      elements.globalError.classList.add('error');
     }
 
     function formatNumber(value) {
@@ -589,6 +695,15 @@
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
+    }
+
+    function formatDate(value) {
+      if (!value) return '-';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) {
+        return String(value);
+      }
+      return d.toLocaleDateString('th-TH');
     }
 
     function renderInventoryTable(list) {
@@ -627,6 +742,52 @@
       elements.rowsCount.textContent = (list ? list.length : 0) + ' รายการ';
     }
 
+    function renderPoTable(list) {
+      const tbody = elements.poTableBody;
+      tbody.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        elements.poEmptyState.classList.remove('hidden');
+      } else {
+        elements.poEmptyState.classList.add('hidden');
+      }
+
+      (list || []).forEach(row => {
+        const tr = document.createElement('tr');
+
+        const itemTd = document.createElement('td');
+        itemTd.className = 'cell-name';
+        itemTd.textContent = row.itemName || '';
+
+        const qtyTd = document.createElement('td');
+        qtyTd.className = 'cell-qty';
+        const pill = document.createElement('span');
+        pill.className = 'quantity-pill';
+        pill.textContent = formatNumber(row.qty);
+        qtyTd.appendChild(pill);
+
+        const unitTd = document.createElement('td');
+        unitTd.className = 'cell-unit';
+        unitTd.textContent = row.unit || '-';
+
+        const dateTd = document.createElement('td');
+        dateTd.textContent = formatDate(row.deliveryDate);
+
+        const vendorTd = document.createElement('td');
+        vendorTd.textContent = row.vendor || '';
+
+        tr.appendChild(itemTd);
+        tr.appendChild(qtyTd);
+        tr.appendChild(unitTd);
+        tr.appendChild(dateTd);
+        tr.appendChild(vendorTd);
+
+        tbody.appendChild(tr);
+      });
+
+      elements.poRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+    }
+
     function updateLastUpdated(isoString) {
       if (!isoString) {
         elements.lastUpdated.textContent = '-';
@@ -638,6 +799,19 @@
         return;
       }
       elements.lastUpdated.textContent = d.toLocaleString('th-TH');
+    }
+
+    function updatePoLastUpdated(isoString) {
+      if (!isoString) {
+        elements.poLastUpdated.textContent = '-';
+        return;
+      }
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) {
+        elements.poLastUpdated.textContent = '-';
+        return;
+      }
+      elements.poLastUpdated.textContent = d.toLocaleString('th-TH');
     }
 
     function updateItemSuggestions(list) {
@@ -666,6 +840,19 @@
       renderInventoryTable(filtered);
     }
 
+    function applyPoFilterAndRender() {
+      const term = elements.poSearchInput.value.trim().toLowerCase();
+      if (!term) {
+        renderPoTable(poData);
+        return;
+      }
+      const filtered = poData.filter(row =>
+        (row.itemName || '').toLowerCase().includes(term) ||
+        (row.vendor || '').toLowerCase().includes(term)
+      );
+      renderPoTable(filtered);
+    }
+
     async function fetchInventory() {
       setLoading(true);
       showGlobalError('');
@@ -686,6 +873,30 @@
         showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
         inventoryData = [];
         renderInventoryTable([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function fetchPo() {
+      setLoading(true);
+      showGlobalError('');
+      try {
+        const res = await fetch(API_URL + '?action=list_po');
+        if (!res.ok) {
+          throw new Error('เชื่อมต่อ Google Apps Script (PO) ไม่ได้ (' + res.status + ')');
+        }
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถโหลดข้อมูล PO จาก Sheet ได้');
+        }
+        poData = data.data || [];
+        updatePoLastUpdated(data.updatedAt);
+        applyPoFilterAndRender();
+      } catch (err) {
+        showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล PO');
+        poData = [];
+        renderPoTable([]);
       } finally {
         setLoading(false);
       }
@@ -747,8 +958,6 @@
         return;
       }
 
-      elements.adminForm.classList.add('submitting');
-
       try {
         const body = new URLSearchParams();
         body.append('action', 'adjust');
@@ -776,16 +985,46 @@
         await fetchInventory();
       } catch (err) {
         showAdminMessage(err.message || 'เกิดข้อผิดพลาด', 'error');
-      } finally {
-        elements.adminForm.classList.remove('submitting');
       }
     }
 
+    function switchPage(page) {
+      if (page === currentPage) return;
+      currentPage = page;
+
+      if (page === 'inventory') {
+        elements.pageInventory.classList.remove('hidden');
+        elements.pagePo.classList.add('hidden');
+        elements.tabInventory.classList.add('active');
+        elements.tabPo.classList.remove('active');
+      } else {
+        elements.pageInventory.classList.add('hidden');
+        elements.pagePo.classList.remove('hidden');
+        elements.tabInventory.classList.remove('active');
+        elements.tabPo.classList.add('active');
+        if (poData.length === 0) {
+          fetchPo();
+        } else {
+          applyPoFilterAndRender();
+        }
+      }
+    }
+
+    // Events
     elements.searchInput.addEventListener('input', applyFilterAndRender);
-    elements.refreshBtn.addEventListener('click', fetchInventory);
+    elements.refreshBtn.addEventListener('click', () => {
+      if (currentPage === 'inventory') {
+        fetchInventory();
+      } else {
+        fetchPo();
+      }
+    });
     elements.itemName.addEventListener('change', autoFillUnitFromItem);
     elements.itemName.addEventListener('blur', autoFillUnitFromItem);
     elements.adminForm.addEventListener('submit', handleAdminSubmit);
+    elements.poSearchInput.addEventListener('input', applyPoFilterAndRender);
+    elements.tabInventory.addEventListener('click', () => switchPage('inventory'));
+    elements.tabPo.addEventListener('click', () => switchPage('po'));
 
     window.addEventListener('DOMContentLoaded', fetchInventory);
   </script>
