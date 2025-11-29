@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>คลังยา - หนีน้ำท่วม</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg-page: #020617;
+      --bg-card: #020617;
+      --bg-elevated: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56,189,248,0.12);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border-subtle: rgba(148,163,184,0.35);
+      --danger: #f97373;
+      --success: #4ade80;
+      --radius-xl: 18px;
+      --shadow-soft: 0 24px 60px rgba(15,23,42,0.7);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px 16px 40px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #1e293b, #020617 55%);
+      color: var(--text-main);
+    }
+
+    .app-shell {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(15,23,42,0.92));
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+
+    .app-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .app-title {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin: 6px 0 4px;
+    }
+
+    .app-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--accent-soft);
+      font-size: 11px;
+      color: var(--accent);
+      background: rgba(15,23,42,0.9);
+    }
+
+    .meta-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .meta-label {
+      opacity: 0.85;
+    }
+
+    .meta-value {
+      color: var(--text-main);
+    }
+
+    button.primary,
+    button.ghost {
+      border-radius: 999px;
+      border: 1px solid transparent;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-main);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    button.primary {
+      background: radial-gradient(circle at top left, var(--accent), #0ea5e9);
+      border-color: transparent;
+      color: #0b1120;
+      box-shadow: 0 10px 30px rgba(56,189,248,0.3);
+    }
+
+    button.primary:hover {
+      filter: brightness(1.05);
+    }
+
+    button.ghost {
+      border-color: var(--border-subtle);
+      background: rgba(15,23,42,0.8);
+      color: var(--text-muted);
+    }
+
+    button.ghost:hover {
+      border-color: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+
+    .global-message {
+      max-width: 1100px;
+      margin: 0 auto 12px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    .global-message.error {
+      border: 1px solid rgba(248,113,113,0.4);
+      background: rgba(127,29,29,0.7);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .search-wrapper {
+      margin-top: 4px;
+    }
+
+    .search-input {
+      width: 100%;
+      border-radius: 999px;
+      padding: 10px 14px;
+      border: 1px solid rgba(148,163,184,0.55);
+      background: rgba(15,23,42,0.9);
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    .search-input::placeholder {
+      color: rgba(148,163,184,0.7);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.55);
+    }
+
+    .table-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .table-title {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .table-wrapper {
+      border-radius: 14px;
+      border: 1px solid rgba(148,163,184,0.35);
+      background: radial-gradient(circle at top left, rgba(56,189,248,0.08), rgba(15,23,42,0.96));
+      overflow: hidden;
+      max-height: 520px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: rgba(15,23,42,0.96);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    th,
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(15,23,42,0.9);
+    }
+
+    th {
+      text-align: left;
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(148,163,184,0.9);
+    }
+
+    tbody tr:nth-child(odd) {
+      background: rgba(15,23,42,0.86);
+    }
+
+    tbody tr:nth-child(even) {
+      background: rgba(15,23,42,0.8);
+    }
+
+    tbody tr:hover {
+      background: rgba(51,65,85,0.9);
+    }
+
+    .cell-name {
+      font-size: 13px;
+    }
+
+    .cell-qty {
+      width: 140px;
+    }
+
+    .cell-unit {
+      width: 90px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .quantity-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 74px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.6);
+    }
+
+    .empty-state {
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .admin-title {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .admin-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .admin-form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 4px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    @media (min-width: 720px) {
+      .form-grid {
+        grid-template-columns: 1.2fr 1.2fr;
+      }
+    }
+
+    .field-input {
+      width: 100%;
+      border-radius: 10px;
+      padding: 9px 11px;
+      border: 1px solid rgba(148,163,184,0.6);
+      background: rgba(15,23,42,0.9);
+      color: var(--text-main);
+      font-size: 13px;
+    }
+
+    .field-input::placeholder {
+      color: rgba(148,163,184,0.7);
+    }
+
+    .field-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.45);
+    }
+
+    .field-inline {
+      display: flex;
+      gap: 10px;
+    }
+
+    .field-inline-col {
+      flex: 1;
+    }
+
+    .hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .admin-footer-row {
+      margin-top: 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-message {
+      font-size: 12px;
+      min-height: 18px;
+    }
+
+    .admin-message.error {
+      color: var(--danger);
+    }
+
+    .admin-message.success {
+      color: var(--success);
+    }
+
+    .field-input.readonly {
+      background: rgba(15,23,42,0.7);
+      border-style: dashed;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(15,23,42,0.5), rgba(15,23,42,0.86));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+    }
+
+    .loading-spinner {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 3px solid rgba(148,163,184,0.4);
+      border-top-color: var(--accent);
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      body {
+        padding: 16px 12px 32px;
+      }
+
+      .card {
+        padding: 14px 14px;
+      }
+
+      th,
+      td {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <div class="card app-header">
+      <div>
+        <div class="badge">Pharmacy Inventory</div>
+        <div class="app-title">คลังยา หนีน้ำท่วม</div>
+        <div class="app-subtitle">ดูยอดคงเหลือ รับเข้า และจ่ายออก จาก Google Sheet</div>
+      </div>
+      <div class="meta-col">
+        <div class="meta-row">
+          <span class="meta-label">อัปเดตล่าสุด:</span>
+          <span id="last-updated" class="meta-value">-</span>
+        </div>
+        <div class="meta-row">
+          <span id="rows-count" class="meta-value">- รายการ</span>
+          <button class="ghost" id="refresh-btn" type="button">รีเฟรช</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="global-error" class="global-message hidden"></div>
+
+    <div class="card">
+      <label class="field-label" for="search-input">ค้นหาชื่อยา</label>
+      <div class="search-wrapper">
+        <input id="search-input" type="text" class="search-input"
+               placeholder="พิมพ์ชื่อยา เช่น adrenaline, nitroglycerine ..."
+               autocomplete="off">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-header-row">
+        <div class="table-title">รายการยาในคลัง</div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อยา</th>
+              <th style="width: 140px;">จำนวนคงเหลือ</th>
+              <th style="width: 90px;">หน่วย</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-tbody"></tbody>
+        </table>
+        <div id="empty-state" class="empty-state hidden">
+          ไม่พบข้อมูลตรงกับการค้นหา
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="admin-header">
+        <div>
+          <div class="admin-title">Admin · รับเข้า / จ่ายออก</div>
+          <div class="admin-subtitle">อัปเดตจำนวนคงเหลือในคลัง (เฉพาะผู้ดูแลระบบ)</div>
+        </div>
+      </div>
+      <form id="admin-form" class="admin-form">
+        <div class="form-grid">
+          <div class="field">
+            <label for="admin-password" class="field-label">รหัสผ่าน Admin</label>
+            <input id="admin-password" type="password" class="field-input"
+                   autocomplete="current-password" required>
+          </div>
+          <div class="field">
+            <label for="item-name" class="field-label">ชื่อยา</label>
+            <input id="item-name" type="text" class="field-input"
+                   list="item-suggestions" autocomplete="off" required>
+            <datalist id="item-suggestions"></datalist>
+            <div class="hint">ถ้าเลือกชื่อยาจากรายการ ระบบจะดึงหน่วยให้โดยอัตโนมัติ</div>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <div class="field">
+            <label for="item-unit" class="field-label">หน่วย</label>
+            <input id="item-unit" type="text" class="field-input" required>
+          </div>
+          <div class="field field-inline">
+            <div class="field-inline-col">
+              <label for="item-amount" class="field-label">จำนวน</label>
+              <input id="item-amount" type="number" min="1" step="1"
+                     class="field-input" required>
+            </div>
+            <div class="field-inline-col">
+              <label for="action-type" class="field-label">ประเภท</label>
+              <select id="action-type" class="field-input">
+                <option value="in">รับเข้า</option>
+                <option value="out">จ่ายออก</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="admin-footer-row">
+          <div id="admin-message" class="admin-message"></div>
+          <button type="submit" class="primary">บันทึกการเคลื่อนไหว</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <script>
+    // TODO: เปลี่ยนเป็น URL Web App ของ Google Apps Script
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyqSTg8O7-if89iCyuSpuQ8df-jHpKYLbjL5JDlvBrAhZQFQnyEMist5i41RZgVTSf4/exec';
+
+    let inventoryData = [];
+    let isLoading = false;
+
+    const elements = {
+      tableBody: document.getElementById('inventory-tbody'),
+      searchInput: document.getElementById('search-input'),
+      lastUpdated: document.getElementById('last-updated'),
+      rowsCount: document.getElementById('rows-count'),
+      emptyState: document.getElementById('empty-state'),
+      refreshBtn: document.getElementById('refresh-btn'),
+      adminForm: document.getElementById('admin-form'),
+      adminMessage: document.getElementById('admin-message'),
+      adminPassword: document.getElementById('admin-password'),
+      itemName: document.getElementById('item-name'),
+      itemUnit: document.getElementById('item-unit'),
+      itemAmount: document.getElementById('item-amount'),
+      actionType: document.getElementById('action-type'),
+      itemSuggestions: document.getElementById('item-suggestions'),
+      globalError: document.getElementById('global-error'),
+      loadingOverlay: document.getElementById('loading-overlay')
+    };
+
+    function setLoading(active) {
+      isLoading = active;
+      if (active) {
+        elements.loadingOverlay.classList.remove('hidden');
+      } else {
+        elements.loadingOverlay.classList.add('hidden');
+      }
+    }
+
+    function showGlobalError(message) {
+      if (!message) {
+        elements.globalError.classList.add('hidden');
+        elements.globalError.textContent = '';
+        return;
+      }
+      elements.globalError.textContent = message;
+      elements.globalError.classList.remove('hidden');
+    }
+
+    function formatNumber(value) {
+      const n = Number(value) || 0;
+      if (Number.isInteger(n)) {
+        return n.toLocaleString('th-TH');
+      }
+      return n.toLocaleString('th-TH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    }
+
+    function renderInventoryTable(list) {
+      const tbody = elements.tableBody;
+      tbody.innerHTML = '';
+      if (!list || list.length === 0) {
+        elements.emptyState.classList.remove('hidden');
+      } else {
+        elements.emptyState.classList.add('hidden');
+      }
+
+      list.forEach(row => {
+        const tr = document.createElement('tr');
+
+        const nameTd = document.createElement('td');
+        nameTd.className = 'cell-name';
+        nameTd.textContent = row.item || '';
+
+        const qtyTd = document.createElement('td');
+        qtyTd.className = 'cell-qty';
+        const pill = document.createElement('span');
+        pill.className = 'quantity-pill';
+        pill.textContent = formatNumber(row.quantity);
+        qtyTd.appendChild(pill);
+
+        const unitTd = document.createElement('td');
+        unitTd.className = 'cell-unit';
+        unitTd.textContent = row.unit || '-';
+
+        tr.appendChild(nameTd);
+        tr.appendChild(qtyTd);
+        tr.appendChild(unitTd);
+        tbody.appendChild(tr);
+      });
+
+      elements.rowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+    }
+
+    function updateLastUpdated(isoString) {
+      if (!isoString) {
+        elements.lastUpdated.textContent = '-';
+        return;
+      }
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) {
+        elements.lastUpdated.textContent = '-';
+        return;
+      }
+      elements.lastUpdated.textContent = d.toLocaleString('th-TH');
+    }
+
+    function updateItemSuggestions(list) {
+      const datalist = elements.itemSuggestions;
+      datalist.innerHTML = '';
+      const seen = new Set();
+      (list || []).forEach(row => {
+        const name = (row.item || '').trim();
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        const option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function applyFilterAndRender() {
+      const term = elements.searchInput.value.trim().toLowerCase();
+      if (!term) {
+        renderInventoryTable(inventoryData);
+        return;
+      }
+      const filtered = inventoryData.filter(row =>
+        (row.item || '').toLowerCase().includes(term)
+      );
+      renderInventoryTable(filtered);
+    }
+
+    async function fetchInventory() {
+      setLoading(true);
+      showGlobalError('');
+      try {
+        const res = await fetch(API_URL + '?action=list');
+        if (!res.ok) {
+          throw new Error('เชื่อมต่อ Google Apps Script ไม่ได้ (' + res.status + ')');
+        }
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถโหลดข้อมูลจาก Sheet ได้');
+        }
+        inventoryData = data.data || [];
+        updateLastUpdated(data.updatedAt);
+        updateItemSuggestions(inventoryData);
+        applyFilterAndRender();
+      } catch (err) {
+        showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+        inventoryData = [];
+        renderInventoryTable([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function autoFillUnitFromItem() {
+      const name = elements.itemName.value.trim().toLowerCase();
+      if (!name) {
+        elements.itemUnit.readOnly = false;
+        elements.itemUnit.classList.remove('readonly');
+        return;
+      }
+      const match = inventoryData.find(row =>
+        (row.item || '').toLowerCase() === name
+      );
+      if (match && match.unit) {
+        elements.itemUnit.value = match.unit;
+        elements.itemUnit.readOnly = true;
+        elements.itemUnit.classList.add('readonly');
+      } else {
+        elements.itemUnit.readOnly = false;
+        elements.itemUnit.classList.remove('readonly');
+      }
+    }
+
+    function clearAdminMessage() {
+      elements.adminMessage.textContent = '';
+      elements.adminMessage.classList.remove('error', 'success');
+    }
+
+    function showAdminMessage(message, type) {
+      elements.adminMessage.textContent = message;
+      elements.adminMessage.classList.remove('error', 'success');
+      if (type === 'error') {
+        elements.adminMessage.classList.add('error');
+      } else if (type === 'success') {
+        elements.adminMessage.classList.add('success');
+      }
+    }
+
+    async function handleAdminSubmit(event) {
+      event.preventDefault();
+      clearAdminMessage();
+
+      const password = elements.adminPassword.value.trim();
+      const itemName = elements.itemName.value.trim();
+      const unit = elements.itemUnit.value.trim();
+      const amountStr = elements.itemAmount.value.trim();
+      const actionType = elements.actionType.value;
+
+      if (!password || !itemName || !unit || !amountStr) {
+        showAdminMessage('กรุณากรอกข้อมูลให้ครบ', 'error');
+        return;
+      }
+
+      const amount = parseFloat(amountStr);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        showAdminMessage('จำนวนต้องมากกว่า 0', 'error');
+        return;
+      }
+
+      elements.adminForm.classList.add('submitting');
+
+      try {
+        const body = new URLSearchParams();
+        body.append('action', 'adjust');
+        body.append('password', password);
+        body.append('itemName', itemName);
+        body.append('unit', unit);
+        body.append('change', String(amount));
+        body.append('direction', actionType);
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: body.toString()
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถบันทึกข้อมูลได้');
+        }
+
+        showAdminMessage(data.message || 'บันทึกสำเร็จ', 'success');
+        elements.itemAmount.value = '';
+        await fetchInventory();
+      } catch (err) {
+        showAdminMessage(err.message || 'เกิดข้อผิดพลาด', 'error');
+      } finally {
+        elements.adminForm.classList.remove('submitting');
+      }
+    }
+
+    elements.searchInput.addEventListener('input', applyFilterAndRender);
+    elements.refreshBtn.addEventListener('click', fetchInventory);
+    elements.itemName.addEventListener('change', autoFillUnitFromItem);
+    elements.itemName.addEventListener('blur', autoFillUnitFromItem);
+    elements.adminForm.addEventListener('submit', handleAdminSubmit);
+
+    window.addEventListener('DOMContentLoaded', fetchInventory);
+  </script>
+</body>
+</html>
