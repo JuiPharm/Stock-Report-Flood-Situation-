@@ -900,3 +900,389 @@
 
         const itemTd = document.createElement('td');
         itemTd.className = 'cell-name';
+        itemTd.textContent = row.item || '';
+
+        const changeTd = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = 'quantity-pill';
+        const prefix = row.change > 0 ? '+' : '';
+        pill.textContent = prefix + formatNumber(row.change);
+        changeTd.appendChild(pill);
+
+        const unitTd = document.createElement('td');
+        unitTd.className = 'cell-unit';
+        unitTd.textContent = row.unit || '-';
+
+        const newQtyTd = document.createElement('td');
+        newQtyTd.textContent = formatNumber(row.newQuantity);
+
+        tr.appendChild(tsTd);
+        tr.appendChild(actionTd);
+        tr.appendChild(itemTd);
+        tr.appendChild(changeTd);
+        tr.appendChild(unitTd);
+        tr.appendChild(newQtyTd);
+
+        tbody.appendChild(tr);
+      });
+
+      elements.txRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+    }
+
+    function renderNewItemsTable(list) {
+      const tbody = elements.newItemsTableBody;
+      tbody.innerHTML = '';
+
+      (list || []).forEach(row => {
+        const tr = document.createElement('tr');
+
+        const itemTd = document.createElement('td');
+        itemTd.className = 'cell-name';
+        itemTd.textContent = row.item || '';
+
+        const unitTd = document.createElement('td');
+        unitTd.className = 'cell-unit';
+        unitTd.textContent = row.unit || '-';
+
+        const tsTd = document.createElement('td');
+        tsTd.textContent = formatDate(row.timestamp);
+
+        const qtyTd = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = 'quantity-pill';
+        pill.textContent = formatNumber(row.newQuantity);
+        qtyTd.appendChild(pill);
+
+        tr.appendChild(itemTd);
+        tr.appendChild(unitTd);
+        tr.appendChild(tsTd);
+        tr.appendChild(qtyTd);
+
+        tbody.appendChild(tr);
+      });
+
+      elements.newItemsRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+    }
+
+    function updateLastUpdated(isoString) {
+      if (!isoString) {
+        elements.lastUpdated.textContent = '-';
+        return;
+      }
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) {
+        elements.lastUpdated.textContent = '-';
+        return;
+      }
+      elements.lastUpdated.textContent = d.toLocaleString('th-TH');
+    }
+
+    function updatePoLastUpdated(isoString) {
+      if (!isoString) {
+        elements.poLastUpdated.textContent = '-';
+        return;
+      }
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) {
+        elements.poLastUpdated.textContent = '-';
+        return;
+      }
+      elements.poLastUpdated.textContent = d.toLocaleString('th-TH');
+    }
+
+    function updateTxLastUpdated(isoString) {
+      if (!isoString) {
+        elements.txLastUpdated.textContent = '-';
+        return;
+      }
+      const d = new Date(isoString);
+      if (Number.isNaN(d.getTime())) {
+        elements.txLastUpdated.textContent = '-';
+        return;
+      }
+      elements.txLastUpdated.textContent = d.toLocaleString('th-TH');
+    }
+
+    function updateItemSuggestions(list) {
+      const datalist = elements.itemSuggestions;
+      datalist.innerHTML = '';
+      const seen = new Set();
+      (list || []).forEach(row => {
+        const name = (row.item || '').trim();
+        if (!name || seen.has(name.toLowerCase())) return;
+        seen.add(name.toLowerCase());
+        const option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function applyFilterAndRender() {
+      const term = elements.searchInput.value.trim().toLowerCase();
+      if (!term) {
+        renderInventoryTable(inventoryData);
+        return;
+      }
+      const filtered = inventoryData.filter(row =>
+        (row.item || '').toLowerCase().includes(term)
+      );
+      renderInventoryTable(filtered);
+    }
+
+    function applyPoFilterAndRender() {
+      const term = elements.poSearchInput.value.trim().toLowerCase();
+      if (!term) {
+        renderPoTable(poData);
+        return;
+      }
+      const filtered = poData.filter(row =>
+        (row.itemName || '').toLowerCase().includes(term) ||
+        (row.vendor || '').toLowerCase().includes(term)
+      );
+      renderPoTable(filtered);
+    }
+
+    function applyTxFilterAndRender() {
+      const term = elements.txSearchInput.value.trim().toLowerCase();
+      if (!term) {
+        renderTxTable(txData);
+        return;
+      }
+      const filtered = txData.filter(row => {
+        const action = (row.action || '').toLowerCase();
+        return (row.item || '').toLowerCase().includes(term) ||
+               action.includes(term);
+      });
+      renderTxTable(filtered);
+    }
+
+    async function fetchInventory() {
+      setLoading(true);
+      showGlobalError('');
+      try {
+        const res = await fetch(API_URL + '?action=list');
+        if (!res.ok) {
+          throw new Error('เชื่อมต่อ Google Apps Script ไม่ได้ (' + res.status + ')');
+        }
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถโหลดข้อมูลจาก Sheet ได้');
+        }
+        inventoryData = data.data || [];
+        updateLastUpdated(data.updatedAt);
+        updateItemSuggestions(inventoryData);
+        applyFilterAndRender();
+      } catch (err) {
+        showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล');
+        inventoryData = [];
+        renderInventoryTable([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function fetchPo() {
+      setLoading(true);
+      showGlobalError('');
+      try {
+        const res = await fetch(API_URL + '?action=list_po');
+        if (!res.ok) {
+          throw new Error('เชื่อมต่อ Google Apps Script (PO) ไม่ได้ (' + res.status + ')');
+        }
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถโหลดข้อมูล PO จาก Sheet ได้');
+        }
+        poData = data.data || [];
+        updatePoLastUpdated(data.updatedAt);
+        applyPoFilterAndRender();
+      } catch (err) {
+        showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลดข้อมูล PO');
+        poData = [];
+        renderPoTable([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function fetchTransactions() {
+      setLoading(true);
+      showGlobalError('');
+      try {
+        const res = await fetch(API_URL + '?action=list_tx');
+        if (!res.ok) {
+          throw new Error('เชื่อมต่อ Google Apps Script (Transaction) ไม่ได้ (' + res.status + ')');
+        }
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถโหลดข้อมูล Transaction จาก Sheet ได้');
+        }
+        const payload = data.data || {};
+        txData = payload.transactions || [];
+        newItemsData = payload.newItems || [];
+        updateTxLastUpdated(data.updatedAt);
+        applyTxFilterAndRender();
+        renderNewItemsTable(newItemsData);
+      } catch (err) {
+        showGlobalError(err.message || 'เกิดข้อผิดพลาดในการโหลด Transaction');
+        txData = [];
+        newItemsData = [];
+        renderTxTable([]);
+        renderNewItemsTable([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function autoFillUnitFromItem() {
+      const name = elements.itemName.value.trim().toLowerCase();
+      if (!name) {
+        elements.itemUnit.readOnly = false;
+        elements.itemUnit.classList.remove('readonly');
+        return;
+      }
+      const match = inventoryData.find(row =>
+        (row.item || '').toLowerCase() === name
+      );
+      if (match && match.unit) {
+        elements.itemUnit.value = match.unit;
+        elements.itemUnit.readOnly = true;
+        elements.itemUnit.classList.add('readonly');
+      } else {
+        elements.itemUnit.readOnly = false;
+        elements.itemUnit.classList.remove('readonly');
+      }
+    }
+
+    function clearAdminMessage() {
+      elements.adminMessage.textContent = '';
+      elements.adminMessage.classList.remove('error', 'success');
+    }
+
+    function showAdminMessage(message, type) {
+      elements.adminMessage.textContent = message;
+      elements.adminMessage.classList.remove('error', 'success');
+      if (type === 'error') {
+        elements.adminMessage.classList.add('error');
+      } else if (type === 'success') {
+        elements.adminMessage.classList.add('success');
+      }
+    }
+
+    async function handleAdminSubmit(event) {
+      event.preventDefault();
+      clearAdminMessage();
+
+      const password = elements.adminPassword.value.trim();
+      const itemName = elements.itemName.value.trim();
+      const unit = elements.itemUnit.value.trim();
+      const amountStr = elements.itemAmount.value.trim();
+      const actionType = elements.actionType.value;
+
+      if (!password || !itemName || !unit || !amountStr) {
+        showAdminMessage('กรุณากรอกข้อมูลให้ครบ', 'error');
+        return;
+      }
+
+      const amount = parseFloat(amountStr);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        showAdminMessage('จำนวนต้องมากกว่า 0', 'error');
+        return;
+      }
+
+      try {
+        const body = new URLSearchParams();
+        body.append('action', 'adjust');
+        body.append('password', password);
+        body.append('itemName', itemName);
+        body.append('unit', unit);
+        body.append('change', String(amount));
+        body.append('direction', actionType);
+
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+          },
+          body: body.toString()
+        });
+
+        const data = await res.json();
+        if (!data.success) {
+          throw new Error(data.error || 'ไม่สามารถบันทึกข้อมูลได้');
+        }
+
+        showAdminMessage(data.message || 'บันทึกสำเร็จ', 'success');
+        elements.itemAmount.value = '';
+        await fetchInventory();
+      } catch (err) {
+        showAdminMessage(err.message || 'เกิดข้อผิดพลาด', 'error');
+      }
+    }
+
+    function switchPage(page) {
+      if (page === currentPage) return;
+      currentPage = page;
+
+      if (page === 'inventory') {
+        elements.pageInventory.classList.remove('hidden');
+        elements.pagePo.classList.add('hidden');
+        elements.pageTx.classList.add('hidden');
+        elements.tabInventory.classList.add('active');
+        elements.tabPo.classList.remove('active');
+        elements.tabTx.classList.remove('active');
+      } else if (page === 'po') {
+        elements.pageInventory.classList.add('hidden');
+        elements.pagePo.classList.remove('hidden');
+        elements.pageTx.classList.add('hidden');
+        elements.tabInventory.classList.remove('active');
+        elements.tabPo.classList.add('active');
+        elements.tabTx.classList.remove('active');
+        if (poData.length === 0) {
+          fetchPo();
+        } else {
+          applyPoFilterAndRender();
+        }
+      } else if (page === 'tx') {
+        elements.pageInventory.classList.add('hidden');
+        elements.pagePo.classList.add('hidden');
+        elements.pageTx.classList.remove('hidden');
+        elements.tabInventory.classList.remove('active');
+        elements.tabPo.classList.remove('active');
+        elements.tabTx.classList.add('active');
+        if (txData.length === 0) {
+          fetchTransactions();
+        } else {
+          applyTxFilterAndRender();
+          renderNewItemsTable(newItemsData);
+        }
+      }
+    }
+
+    // Events
+    elements.searchInput.addEventListener('input', applyFilterAndRender);
+    elements.poSearchInput.addEventListener('input', applyPoFilterAndRender);
+    elements.txSearchInput.addEventListener('input', applyTxFilterAndRender);
+
+    elements.refreshBtn.addEventListener('click', () => {
+      if (currentPage === 'inventory') {
+        fetchInventory();
+      } else if (currentPage === 'po') {
+        fetchPo();
+      } else if (currentPage === 'tx') {
+        fetchTransactions();
+      }
+    });
+
+    elements.itemName.addEventListener('change', autoFillUnitFromItem);
+    elements.itemName.addEventListener('blur', autoFillUnitFromItem);
+    elements.adminForm.addEventListener('submit', handleAdminSubmit);
+
+    elements.tabInventory.addEventListener('click', () => switchPage('inventory'));
+    elements.tabPo.addEventListener('click', () => switchPage('po'));
+    elements.tabTx.addEventListener('click', () => switchPage('tx'));
+
+    window.addEventListener('DOMContentLoaded', fetchInventory);
+  </script>
+</body>
+</html>
