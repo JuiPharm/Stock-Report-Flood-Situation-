@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>Stock Reports (Flood Situation)</title>
+  <title>Stock Report (Flood situation)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
@@ -20,9 +20,7 @@
       --shadow-soft: 0 24px 60px rgba(15,23,42,0.7);
     }
 
-    *,
-    *::before,
-    *::after {
+    *, *::before, *::after {
       box-sizing: border-box;
     }
 
@@ -226,8 +224,7 @@
       z-index: 1;
     }
 
-    th,
-    td {
+    th, td {
       padding: 10px 12px;
       border-bottom: 1px solid rgba(15,23,42,0.9);
     }
@@ -381,32 +378,6 @@
       border-style: dashed;
     }
 
-    .loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at top, rgba(15,23,42,0.5), rgba(15,23,42,0.86));
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 40;
-    }
-
-    .loading-spinner {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      border: 3px solid rgba(148,163,184,0.4);
-      border-top-color: var(--accent);
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-
-    /* Tabs */
     .tabs-card {
       padding: 10px 14px;
       margin-top: -6px;
@@ -453,8 +424,7 @@
         padding: 14px 14px;
       }
 
-      th,
-      td {
+      th, td {
         padding: 8px 10px;
       }
     }
@@ -578,10 +548,10 @@
     <!-- PAGE: PO รอจัดส่ง -->
     <div id="page-po" class="hidden">
       <div class="card">
-        <label class="field-label" for="po-search-input">ค้นหา (Item name / Vendor)</label>
+        <label class="field-label" for="po-search-input">ค้นหา (Item / Vendor / PO)</label>
         <div class="search-wrapper">
           <input id="po-search-input" type="text" class="search-input"
-                 placeholder="ค้นหาชื่อยา หรือ vendor"
+                 placeholder="ค้นหาชื่อยา, vendor หรือ PO number"
                  autocomplete="off">
         </div>
       </div>
@@ -603,6 +573,8 @@
                 <th>Unit</th>
                 <th>Delivery date</th>
                 <th>Vendor</th>
+                <th>PR Status</th>
+                <th>PO Number</th>
               </tr>
             </thead>
             <tbody id="po-tbody"></tbody>
@@ -686,12 +658,8 @@
     </div>
   </div>
 
-  <div id="loading-overlay" class="loading-overlay hidden">
-    <div class="loading-spinner"></div>
-  </div>
-
   <script>
-    // TODO: เปลี่ยนเป็น URL Web App ของ Google Apps Script
+    // TODO: เปลี่ยนเป็น URL Web App ของ Google Apps Script ที่ Deploy แล้ว
     const API_URL = 'https://script.google.com/macros/s/AKfycbyqSTg8O7-if89iCyuSpuQ8df-jHpKYLbjL5JDlvBrAhZQFQnyEMist5i41RZgVTSf4/exec';
 
     let inventoryData = [];
@@ -743,20 +711,18 @@
       pageTx: document.getElementById('page-tx'),
 
       // Global
-      globalError: document.getElementById('global-error'),
-      loadingOverlay: document.getElementById('loading-overlay')
+      globalError: document.getElementById('global-error')
     };
 
     function setLoading(active) {
       isLoading = active;
-      if (active) {
-        elements.loadingOverlay.classList.remove('hidden');
-      } else {
-        elements.loadingOverlay.classList.add('hidden');
+      if (elements.refreshBtn) {
+        elements.refreshBtn.disabled = active;
       }
     }
 
     function showGlobalError(message) {
+      if (!elements.globalError) return;
       if (!message) {
         elements.globalError.classList.add('hidden');
         elements.globalError.textContent = '';
@@ -797,15 +763,16 @@
     }
 
     function renderInventoryTable(list) {
+      if (!elements.tableBody) return;
       const tbody = elements.tableBody;
       tbody.innerHTML = '';
       if (!list || list.length === 0) {
-        elements.emptyState.classList.remove('hidden');
+        elements.emptyState && elements.emptyState.classList.remove('hidden');
       } else {
-        elements.emptyState.classList.add('hidden');
+        elements.emptyState && elements.emptyState.classList.add('hidden');
       }
 
-      list.forEach(row => {
+      (list || []).forEach(row => {
         const tr = document.createElement('tr');
 
         const nameTd = document.createElement('td');
@@ -829,63 +796,84 @@
         tbody.appendChild(tr);
       });
 
-      elements.rowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      if (elements.rowsCount) {
+        elements.rowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      }
     }
 
     function renderPoTable(list) {
+      if (!elements.poTableBody) return;
       const tbody = elements.poTableBody;
       tbody.innerHTML = '';
 
       if (!list || list.length === 0) {
-        elements.poEmptyState.classList.remove('hidden');
+        elements.poEmptyState && elements.poEmptyState.classList.remove('hidden');
       } else {
-        elements.poEmptyState.classList.add('hidden');
+        elements.poEmptyState && elements.poEmptyState.classList.add('hidden');
       }
 
       (list || []).forEach(row => {
         const tr = document.createElement('tr');
 
+        // Item name
         const itemTd = document.createElement('td');
         itemTd.className = 'cell-name';
         itemTd.textContent = row.itemName || '';
 
+        // QTY
         const qtyTd = document.createElement('td');
         qtyTd.className = 'cell-qty';
-        const pill = document.createElement('span');
-        pill.className = 'quantity-pill';
-        pill.textContent = formatNumber(row.qty);
-        qtyTd.appendChild(pill);
+        const qtyPill = document.createElement('span');
+        qtyPill.className = 'quantity-pill';
+        qtyPill.textContent = formatNumber(row.qty);
+        qtyTd.appendChild(qtyPill);
 
+        // Unit
         const unitTd = document.createElement('td');
         unitTd.className = 'cell-unit';
         unitTd.textContent = row.unit || '-';
 
+        // Delivery date
         const dateTd = document.createElement('td');
         dateTd.textContent = formatDate(row.deliveryDate);
 
+        // Vendor
         const vendorTd = document.createElement('td');
         vendorTd.textContent = row.vendor || '';
+
+        // PR Status
+        const statusTd = document.createElement('td');
+        statusTd.textContent = row.prStatus || '';
+
+        // PO Number
+        const poTd = document.createElement('td');
+        poTd.textContent = row.poNumber || '';
 
         tr.appendChild(itemTd);
         tr.appendChild(qtyTd);
         tr.appendChild(unitTd);
         tr.appendChild(dateTd);
         tr.appendChild(vendorTd);
+        tr.appendChild(statusTd);
+        tr.appendChild(poTd);
 
         tbody.appendChild(tr);
       });
 
-      elements.poRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      if (elements.poRowsCount) {
+        elements.poRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      }
     }
 
     function renderTxTable(list) {
+      if (!elements.txTableBody) return;
       const tbody = elements.txTableBody;
       tbody.innerHTML = '';
 
       if (!list || list.length === 0) {
-        elements.txEmptyState.classList.remove('hidden');
+        elements.txEmptyState && elements.txEmptyState.classList.remove('hidden');
       } else {
-        elements.txEmptyState.classList.add('hidden');
+        elements.txEmptyState && elements.txEmptyState.classList.add('hidden');
       }
 
       (list || []).forEach(row => {
@@ -896,7 +884,11 @@
 
         const actionTd = document.createElement('td');
         const action = (row.action || '').toLowerCase();
-        actionTd.textContent = action === 'in' ? 'รับเข้า' : (action === 'out' ? 'จ่ายออก' : row.action || '');
+        actionTd.textContent = action === 'in'
+          ? 'รับเข้า'
+          : action === 'out'
+          ? 'จ่ายออก'
+          : row.action || '';
 
         const itemTd = document.createElement('td');
         itemTd.className = 'cell-name';
@@ -926,10 +918,13 @@
         tbody.appendChild(tr);
       });
 
-      elements.txRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      if (elements.txRowsCount) {
+        elements.txRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      }
     }
 
     function renderNewItemsTable(list) {
+      if (!elements.newItemsTableBody) return;
       const tbody = elements.newItemsTableBody;
       tbody.innerHTML = '';
 
@@ -961,10 +956,13 @@
         tbody.appendChild(tr);
       });
 
-      elements.newItemsRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      if (elements.newItemsRowsCount) {
+        elements.newItemsRowsCount.textContent = (list ? list.length : 0) + ' รายการ';
+      }
     }
 
     function updateLastUpdated(isoString) {
+      if (!elements.lastUpdated) return;
       if (!isoString) {
         elements.lastUpdated.textContent = '-';
         return;
@@ -978,6 +976,7 @@
     }
 
     function updatePoLastUpdated(isoString) {
+      if (!elements.poLastUpdated) return;
       if (!isoString) {
         elements.poLastUpdated.textContent = '-';
         return;
@@ -991,6 +990,7 @@
     }
 
     function updateTxLastUpdated(isoString) {
+      if (!elements.txLastUpdated) return;
       if (!isoString) {
         elements.txLastUpdated.textContent = '-';
         return;
@@ -1004,6 +1004,7 @@
     }
 
     function updateItemSuggestions(list) {
+      if (!elements.itemSuggestions) return;
       const datalist = elements.itemSuggestions;
       datalist.innerHTML = '';
       const seen = new Set();
@@ -1018,6 +1019,10 @@
     }
 
     function applyFilterAndRender() {
+      if (!elements.searchInput) {
+        renderInventoryTable(inventoryData);
+        return;
+      }
       const term = elements.searchInput.value.trim().toLowerCase();
       if (!term) {
         renderInventoryTable(inventoryData);
@@ -1030,6 +1035,10 @@
     }
 
     function applyPoFilterAndRender() {
+      if (!elements.poSearchInput) {
+        renderPoTable(poData);
+        return;
+      }
       const term = elements.poSearchInput.value.trim().toLowerCase();
       if (!term) {
         renderPoTable(poData);
@@ -1037,12 +1046,17 @@
       }
       const filtered = poData.filter(row =>
         (row.itemName || '').toLowerCase().includes(term) ||
-        (row.vendor || '').toLowerCase().includes(term)
+        (row.vendor   || '').toLowerCase().includes(term) ||
+        (row.poNumber || '').toLowerCase().includes(term)
       );
       renderPoTable(filtered);
     }
 
     function applyTxFilterAndRender() {
+      if (!elements.txSearchInput) {
+        renderTxTable(txData);
+        return;
+      }
       const term = elements.txSearchInput.value.trim().toLowerCase();
       if (!term) {
         renderTxTable(txData);
@@ -1135,6 +1149,7 @@
     }
 
     function autoFillUnitFromItem() {
+      if (!elements.itemName || !elements.itemUnit) return;
       const name = elements.itemName.value.trim().toLowerCase();
       if (!name) {
         elements.itemUnit.readOnly = false;
@@ -1155,11 +1170,13 @@
     }
 
     function clearAdminMessage() {
+      if (!elements.adminMessage) return;
       elements.adminMessage.textContent = '';
       elements.adminMessage.classList.remove('error', 'success');
     }
 
     function showAdminMessage(message, type) {
+      if (!elements.adminMessage) return;
       elements.adminMessage.textContent = message;
       elements.adminMessage.classList.remove('error', 'success');
       if (type === 'error') {
@@ -1172,6 +1189,11 @@
     async function handleAdminSubmit(event) {
       event.preventDefault();
       clearAdminMessage();
+
+      if (!elements.adminPassword || !elements.itemName || !elements.itemUnit || !elements.itemAmount || !elements.actionType) {
+        showAdminMessage('ฟอร์มไม่ครบถ้วน', 'error');
+        return;
+      }
 
       const password = elements.adminPassword.value.trim();
       const itemName = elements.itemName.value.trim();
@@ -1224,32 +1246,37 @@
       if (page === currentPage) return;
       currentPage = page;
 
+      if (elements.pageInventory && elements.pagePo && elements.pageTx) {
+        if (page === 'inventory') {
+          elements.pageInventory.classList.remove('hidden');
+          elements.pagePo.classList.add('hidden');
+          elements.pageTx.classList.add('hidden');
+        } else if (page === 'po') {
+          elements.pageInventory.classList.add('hidden');
+          elements.pagePo.classList.remove('hidden');
+          elements.pageTx.classList.add('hidden');
+        } else if (page === 'tx') {
+          elements.pageInventory.classList.add('hidden');
+          elements.pagePo.classList.add('hidden');
+          elements.pageTx.classList.remove('hidden');
+        }
+      }
+
+      if (elements.tabInventory && elements.tabPo && elements.tabTx) {
+        elements.tabInventory.classList.toggle('active', page === 'inventory');
+        elements.tabPo.classList.toggle('active', page === 'po');
+        elements.tabTx.classList.toggle('active', page === 'tx');
+      }
+
       if (page === 'inventory') {
-        elements.pageInventory.classList.remove('hidden');
-        elements.pagePo.classList.add('hidden');
-        elements.pageTx.classList.add('hidden');
-        elements.tabInventory.classList.add('active');
-        elements.tabPo.classList.remove('active');
-        elements.tabTx.classList.remove('active');
+        applyFilterAndRender();
       } else if (page === 'po') {
-        elements.pageInventory.classList.add('hidden');
-        elements.pagePo.classList.remove('hidden');
-        elements.pageTx.classList.add('hidden');
-        elements.tabInventory.classList.remove('active');
-        elements.tabPo.classList.add('active');
-        elements.tabTx.classList.remove('active');
         if (poData.length === 0) {
           fetchPo();
         } else {
           applyPoFilterAndRender();
         }
       } else if (page === 'tx') {
-        elements.pageInventory.classList.add('hidden');
-        elements.pagePo.classList.add('hidden');
-        elements.pageTx.classList.remove('hidden');
-        elements.tabInventory.classList.remove('active');
-        elements.tabPo.classList.remove('active');
-        elements.tabTx.classList.add('active');
         if (txData.length === 0) {
           fetchTransactions();
         } else {
@@ -1259,30 +1286,49 @@
       }
     }
 
-    // Events
-    elements.searchInput.addEventListener('input', applyFilterAndRender);
-    elements.poSearchInput.addEventListener('input', applyPoFilterAndRender);
-    elements.txSearchInput.addEventListener('input', applyTxFilterAndRender);
-
-    elements.refreshBtn.addEventListener('click', () => {
-      if (currentPage === 'inventory') {
-        fetchInventory();
-      } else if (currentPage === 'po') {
-        fetchPo();
-      } else if (currentPage === 'tx') {
-        fetchTransactions();
+    function bindEvents() {
+      if (elements.searchInput) {
+        elements.searchInput.addEventListener('input', applyFilterAndRender);
       }
+      if (elements.poSearchInput) {
+        elements.poSearchInput.addEventListener('input', applyPoFilterAndRender);
+      }
+      if (elements.txSearchInput) {
+        elements.txSearchInput.addEventListener('input', applyTxFilterAndRender);
+      }
+      if (elements.refreshBtn) {
+        elements.refreshBtn.addEventListener('click', () => {
+          if (currentPage === 'inventory') {
+            fetchInventory();
+          } else if (currentPage === 'po') {
+            fetchPo();
+          } else if (currentPage === 'tx') {
+            fetchTransactions();
+          }
+        });
+      }
+      if (elements.itemName) {
+        elements.itemName.addEventListener('change', autoFillUnitFromItem);
+        elements.itemName.addEventListener('blur', autoFillUnitFromItem);
+      }
+      if (elements.adminForm) {
+        elements.adminForm.addEventListener('submit', handleAdminSubmit);
+      }
+      if (elements.tabInventory) {
+        elements.tabInventory.addEventListener('click', () => switchPage('inventory'));
+      }
+      if (elements.tabPo) {
+        elements.tabPo.addEventListener('click', () => switchPage('po'));
+      }
+      if (elements.tabTx) {
+        elements.tabTx.addEventListener('click', () => switchPage('tx'));
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bindEvents();
+      fetchInventory();
     });
-
-    elements.itemName.addEventListener('change', autoFillUnitFromItem);
-    elements.itemName.addEventListener('blur', autoFillUnitFromItem);
-    elements.adminForm.addEventListener('submit', handleAdminSubmit);
-
-    elements.tabInventory.addEventListener('click', () => switchPage('inventory'));
-    elements.tabPo.addEventListener('click', () => switchPage('po'));
-    elements.tabTx.addEventListener('click', () => switchPage('tx'));
-
-    window.addEventListener('DOMContentLoaded', fetchInventory);
   </script>
 </body>
 </html>
